@@ -25,11 +25,13 @@ import { takeUntilComplete } from "../internal/take-until-complete"
 export default function connectObservable<T>(
   observable: Observable<T>,
   unsubscribeGraceTime: number,
+  asap: boolean,
 ) {
   const sharedObservable$ = shareLatest<T>(observable)
   const reactObservable$ = reactEnhancer(
     sharedObservable$,
     unsubscribeGraceTime,
+    asap,
   )
   const outputObservable$ = takeUntilComplete(sharedObservable$)
   const useStaticObservable = () => useObservable(reactObservable$)

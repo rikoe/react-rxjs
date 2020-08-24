@@ -23,6 +23,7 @@ import connectObservable from "./connectObservable"
 export function bind<T>(
   observable: Observable<T>,
   unsubscribeGraceTime?: number,
+  asap?: boolean,
 ): [() => Exclude<T, typeof SUSPENSE>, Observable<T>]
 
 /**
@@ -49,13 +50,15 @@ export function bind<T>(
 export function bind<A extends unknown[], O>(
   getObservable: (...args: A) => Observable<O>,
   unsubscribeGraceTime?: number,
+  asap?: boolean,
 ): [(...args: A) => Exclude<O, typeof SUSPENSE>, (...args: A) => Observable<O>]
 
 export function bind<A extends unknown[], O>(
   obs: ((...args: A) => Observable<O>) | Observable<O>,
   unsubscribeGraceTime = 200,
+  asap = true,
 ) {
   return (typeof obs === "function"
     ? (connectFactoryObservable as any)
-    : connectObservable)(obs, unsubscribeGraceTime)
+    : connectObservable)(obs, unsubscribeGraceTime, asap)
 }

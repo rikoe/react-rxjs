@@ -4,30 +4,53 @@ import { SUSPENSE } from "../SUSPENSE"
 import { BehaviorObservable } from "./BehaviorObservable"
 import { EMPTY_VALUE } from "./empty-value"
 import { noop } from "./noop"
+import { getBatch } from "./batch"
 import { COMPLETE } from "./COMPLETE"
+
+let queue: Array<() => void> = []
+let promise: Promise<void> | null = null
+const flush = () => {
+  promise = null
+  const originalQueue = queue
+  queue = []
+  getBatch()(() => {
+    originalQueue.forEach((fn) => fn())
+  })
+}
+
+const push = (fn: () => void) => {
+  queue.push(fn)
+  if (!promise) {
+    promise = Promise.resolve().then(flush)
+  }
+}
 
 const reactEnhancer = <T>(
   source$: Observable<T>,
   delayTime: number,
+  asap: boolean,
 ): BehaviorObservable<T> => {
   let finalizeLastUnsubscription = noop
   const result = new Observable<T>((subscriber) => {
     let isActive = true
     let latestValue = EMPTY_VALUE
-    const subscription = source$.subscribe(
-      (value) => {
-        if (
-          isActive &&
-          value !== (COMPLETE as any) &&
-          !Object.is(latestValue, value)
-        ) {
-          subscriber.next((latestValue = value))
-        }
-      },
-      (e) => {
-        subscriber.error(e)
-      },
-    )
+
+    let next = subscriber.next.bind(subscriber)
+    let error = subscriber.error.bind(subscriber)
+    if (asap) {
+      next = (x) => push(() => next(x))
+      error = (e) => push(() => error(e))
+    }
+
+    const subscription = source$.subscribe((value) => {
+      if (
+        isActive &&
+        value !== (COMPLETE as any) &&
+        !Object.is(latestValue, value)
+      ) {
+        next((latestValue = value))
+      }
+    }, error)
     finalizeLastUnsubscription()
     return () => {
       finalizeLastUnsubscription()
@@ -69,7 +92,7 @@ const reactEnhancer = <T>(
       let isSyncError = false
       promise = {
         type: "s",
-        payload: reactEnhancer(source$, delayTime)
+        payload: reactEnhancer(source$, delayTime, false)
           .pipe(
             filter((value) => value !== (SUSPENSE as any)),
             take(1),

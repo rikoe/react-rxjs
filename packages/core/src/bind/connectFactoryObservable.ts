@@ -31,6 +31,7 @@ import { takeUntilComplete } from "../internal/take-until-complete"
 export default function connectFactoryObservable<A extends [], O>(
   getObservable: (...args: A) => Observable<O>,
   unsubscribeGraceTime: number,
+  asap: boolean,
 ): [
   (...args: A) => Exclude<O, typeof SUSPENSE>,
   (...args: A) => Observable<O>,
@@ -57,6 +58,7 @@ export default function connectFactoryObservable<A extends [], O>(
     const reactObservable$ = reactEnhancer(
       sharedObservable$,
       unsubscribeGraceTime,
+      asap,
     )
 
     const result: [Observable<O>, BehaviorObservable<O>] = [

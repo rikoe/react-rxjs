@@ -40,7 +40,7 @@ describe("connectObservable", () => {
     console.error = originalError
   })
 
-  it("sets the initial state synchronously if it's available", async () => {
+  it.only("sets the initial state synchronously if it's available", () => {
     const observable$ = of(1)
     const [useLatestNumber] = bind(observable$)
 
